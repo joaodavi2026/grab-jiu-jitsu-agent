@@ -3,7 +3,23 @@
 Projeto acadêmico: um agente virtual de atendimento para a **Academia Grab
 Jiu-Jitsu**, que conversa com alunos e interessados diretamente pelo
 WhatsApp, usando inteligência artificial (Google Gemini) para gerar as
-respostas.
+respostas. Inclui também um **dashboard administrativo** para acompanhar o
+atendimento (contatos, mensagens, histórico de conversas) pelo navegador.
+
+## Já tenho o projeto — como atualizar
+
+Se você já clonou este repositório antes e só quer pegar as novidades
+(como o dashboard):
+
+```powershell
+git pull
+npm install
+```
+
+O `npm install` é importante mesmo se você não mexeu em nada — ele instala
+as dependências novas que podem ter sido adicionadas. Depois disso, veja a
+seção [6. Configuração](#6-configuração) caso existam variáveis de ambiente
+novas no `.env.example` que ainda não estão no seu `.env`.
 
 ## 1. Objetivo
 
@@ -25,10 +41,10 @@ Baileys            (conecta ao WhatsApp Web, envia/recebe mensagens)
    ↓
 Node.js            (recebe o evento de mensagem)
    ↓
-Memory / Context   (recupera o histórico daquele contato)
-   ↓
-Gemini             (persona + dados da academia + histórico + pergunta atual)
-   ↓
+Memory / Context   (recupera o histórico daquele contato, para o Gemini)
+   ↓                        ↘
+Gemini             (persona)  SQLite (data/dashboard.sqlite)  ←→  Dashboard web
+   ↓                        ↗          (mesmo processo, porta 3000)
 Resposta           (texto gerado pela IA)
    ↓
 Baileys
@@ -37,7 +53,10 @@ WhatsApp
 ```
 
 Cada mensagem recebida passa por esse fluxo completo antes de uma resposta
-ser enviada de volta ao mesmo contato.
+ser enviada de volta ao mesmo contato. Em paralelo, a mensagem recebida e a
+resposta enviada são gravadas no banco SQLite local, que alimenta o
+dashboard — isso não atrasa nem interfere no envio da resposta pelo
+WhatsApp.
 
 ## 3. Estrutura do projeto
 
@@ -45,12 +64,20 @@ ser enviada de volta ao mesmo contato.
 grab-jiu-jitsu-agent/
 │
 ├── src/
-│   ├── index.js      # Ponto de entrada: valida ambiente e inicia o agente
+│   ├── index.js      # Ponto de entrada: valida ambiente e inicia agente + dashboard
 │   ├── whatsapp.js    # Conexão com o WhatsApp (Baileys), QR Code, envio/recebimento
 │   ├── gemini.js       # Integração com o Google Gemini (persona + geração de resposta)
 │   ├── config.js       # Dados da academia e configurações gerais (fácil de editar)
-│   └── memory.js       # Histórico de conversa em memória, por contato
+│   ├── memory.js       # Histórico de conversa em memória, por contato (contexto do Gemini)
+│   ├── db.js           # Banco SQLite (sql.js): grava e consulta mensagens para o dashboard
+│   └── dashboard.js    # Servidor web (Express) do dashboard administrativo
 │
+├── public/             # Frontend do dashboard (HTML/CSS/JS puro, sem build)
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
+│
+├── data/                # Banco SQLite (gerado automaticamente, não versionado)
 ├── auth_info_baileys/  # Sessão do WhatsApp salva localmente (gerado automaticamente, não versionar)
 ├── .env                # Suas variáveis de ambiente reais (não versionar)
 ├── .env.example        # Modelo do .env
@@ -59,12 +86,14 @@ grab-jiu-jitsu-agent/
 └── README.md
 ```
 
-### Por que apenas 5 arquivos em `src/`?
+### Por que essa divisão de arquivos?
 
-O projeto foi dividido por responsabilidade (config, memória, IA, WhatsApp,
-entrada) porque isso facilita explicar cada parte separadamente na
-apresentação, sem transformar isso em algo complexo: cada arquivo tem uma
-única razão para existir e pode ser lido em poucos minutos.
+O projeto é dividido por responsabilidade (config, memória, IA, WhatsApp,
+banco, dashboard, entrada) porque isso facilita explicar cada parte
+separadamente na apresentação, sem transformar isso em algo complexo: cada
+arquivo tem uma única razão para existir e pode ser lido em poucos minutos.
+O dashboard roda **no mesmo processo** do agente (mesmo `npm start`) — não é
+um serviço separado para instalar ou gerenciar.
 
 ## 4. Tecnologias utilizadas
 
@@ -76,19 +105,41 @@ apresentação, sem transformar isso em algo complexo: cada arquivo tem uma
 | **`dotenv`** | Carrega variáveis de ambiente (como a API Key) a partir do arquivo `.env` |
 | **`qrcode-terminal`** | Desenha o QR Code de autenticação diretamente no terminal |
 | **`pino`** | Logger usado internamente pelo Baileys (aqui configurado em modo silencioso, para deixar o terminal limpo com nossos próprios logs) |
+| **[`sql.js`](https://sql.js.org/)** | SQLite compilado para WebAssembly — usado pelo dashboard para guardar mensagens e contatos. Escolhido por não depender de compilador nenhum (ver nota abaixo) |
+| **[`express`](https://expressjs.com/)** | Servidor web do dashboard (API + arquivos estáticos), rodando no mesmo processo do agente |
 | **`nodemon`** (dev) | Reinicia o processo automaticamente a cada alteração de código durante o desenvolvimento |
+
+> **Por que `sql.js` e não `better-sqlite3`?** Durante o desenvolvimento,
+> `better-sqlite3` (a opção mais comum para SQLite em Node.js) se mostrou
+> frágil para um projeto pensado para "clonar e rodar em qualquer PC": a
+> versão mais recente trava com *segmentation fault* em versões do Node
+> anteriores à 22, e uma versão mais antiga compatível exige um compilador
+> C++ instalado (Visual Studio Build Tools no Windows) para funcionar.
+> `sql.js` é SQLite real compilado para WebAssembly puro — o `npm install`
+> nunca precisa compilar nada, em nenhum sistema operacional.
 
 ## 5. Instalação
 
 Pré-requisito: [Node.js](https://nodejs.org/) 18 ou superior instalado.
 
-Clone o repositório e instale as dependências:
+Clone o repositório e instale as dependências.
 
+**PowerShell:**
 ```powershell
 git clone https://github.com/joaodavi2026/grab-jiu-jitsu-agent.git
 cd grab-jiu-jitsu-agent
 npm install
 ```
+
+**CMD (Prompt de Comando):**
+```cmd
+git clone https://github.com/joaodavi2026/grab-jiu-jitsu-agent.git
+cd grab-jiu-jitsu-agent
+npm install
+```
+
+Os comandos são idênticos nos dois terminais a partir daqui — só o comando
+para copiar o `.env` (próxima seção) muda entre PowerShell e CMD.
 
 Isso instala todas as dependências listadas no `package.json` — nenhuma
 outra configuração é necessária além do `.env` (próxima seção).
@@ -97,10 +148,17 @@ outra configuração é necessária além do `.env` (próxima seção).
 
 ### 6.1. Variáveis de ambiente
 
-Copie o arquivo de exemplo e edite com sua chave:
+Copie o arquivo de exemplo:
 
+**PowerShell:**
 ```powershell
 Copy-Item .env.example .env
+notepad .env
+```
+
+**CMD:**
+```cmd
+copy .env.example .env
 notepad .env
 ```
 
@@ -110,7 +168,13 @@ Preencha:
 GEMINI_API_KEY=sua_chave_aqui
 GEMINI_MODEL=gemini-3.1-flash-lite
 MAX_HISTORICO_MENSAGENS=20
+DASHBOARD_PASSWORD=escolha-uma-senha-sua
+DASHBOARD_PORT=3000
 ```
+
+`DASHBOARD_PASSWORD` é a senha do dashboard administrativo (seção 9). Sem
+ela definida, o dashboard simplesmente não inicia — o agente de WhatsApp
+continua funcionando normalmente mesmo assim.
 
 > **Sobre o modelo:** o projeto foi originalmente especificado com
 > `gemini-1.5-flash`, mas esse modelo foi descontinuado pelo Google antes da
@@ -211,7 +275,49 @@ conduzir esse diálogo de forma natural, usando o histórico da conversa.
 Nesta versão, **nenhum agendamento real é feito** — o agente apenas coleta
 os dados e informa que a equipe entrará em contato.
 
-## 10. Como testar
+## 10. Dashboard administrativo
+
+Um painel web para acompanhar o atendimento sem precisar ler o terminal.
+Ele roda automaticamente junto com o agente — não é preciso iniciar nada
+separado.
+
+### 10.1. Como acessar
+
+1. Rode `npm start` normalmente (o dashboard sobe junto).
+2. Abra no navegador: **http://localhost:3000** (ou a porta que você definiu
+   em `DASHBOARD_PORT`).
+3. O navegador vai pedir usuário e senha — pode digitar qualquer coisa no
+   usuário, e a senha é o valor de `DASHBOARD_PASSWORD` no seu `.env`.
+
+### 10.2. O que ele mostra
+
+**Visão geral:**
+- total de contatos únicos, mensagens recebidas, mensagens enviadas e
+  contatos que já mandaram mensagem hoje;
+- status da conexão do WhatsApp (conectado / conectando / desconectado),
+  atualizado automaticamente;
+- lista das conversas mais recentes.
+
+**Conversas:**
+- lista de todos os contatos, com nome (quando o WhatsApp informa) ou
+  telefone parcialmente mascarado, e a última mensagem trocada;
+- ao clicar em um contato, mostra o histórico completo da conversa, com
+  bolhas diferenciadas: mensagens recebidas à esquerda, respostas do agente
+  à direita.
+
+A tela inteira se atualiza sozinha a cada poucos segundos — não é preciso
+recarregar a página.
+
+### 10.3. Segurança
+
+- O telefone completo dos contatos **nunca** aparece na interface — só uma
+  versão mascarada (ex.: `5511****9999`).
+- Nenhuma credencial (chave do Gemini, sessão do WhatsApp, senha) é enviada
+  ao navegador — a página só recebe métricas e mensagens.
+- Sem `DASHBOARD_PASSWORD` configurada, o dashboard não inicia — mas o
+  agente de WhatsApp continua funcionando normalmente.
+
+## 11. Como testar
 
 Roteiro sugerido para apresentar/validar o projeto:
 
@@ -230,8 +336,13 @@ Roteiro sugerido para apresentar/validar o projeto:
 7. **Erro proposital**: coloque uma `GEMINI_API_KEY` inválida no `.env`,
    reinicie e mande uma mensagem — o agente deve responder com a mensagem
    de erro amigável ("Desculpe! 😅 ...") em vez de travar.
+8. **Dashboard**: acesse `http://localhost:3000`, confirme que pede senha,
+   e que os cards de métrica e a lista de conversas batem com o que você
+   mandou pelo WhatsApp nos passos anteriores.
+9. **Diferenciação visual**: na aba "Conversas", confirme que as mensagens
+   que você mandou aparecem de um lado e as respostas do agente do outro.
 
-## 11. Como apresentar este projeto na faculdade
+## 12. Como apresentar este projeto na faculdade
 
 Um roteiro simples para explicar o funcionamento ao professor:
 
@@ -262,7 +373,7 @@ Um roteiro simples para explicar o funcionamento ao professor:
   do Gemini (`src/gemini.js`). Todo o resto (Baileys, memória, config) é
   "encanamento" para levar a mensagem até a IA e trazer a resposta de volta.
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Problema | Causa provável | Solução |
 |---|---|---|
@@ -274,37 +385,45 @@ Um roteiro simples para explicar o funcionamento ao professor:
 | `Sessão encerrada (logout)` | O WhatsApp do celular removeu o aparelho conectado | Apague a pasta `auth_info_baileys/` e rode `npm start` de novo para gerar um novo QR Code |
 | Agente não responde nada | Mensagem não é de texto (áudio, figurinha, imagem) | Comportamento esperado nesta versão — só texto é suportado |
 | Respostas genéricas demais (não conhece dados reais) | Campos ainda como `PREENCHER` em `src/config.js` | Preencha os dados reais da academia |
+| Dashboard não inicia (`DASHBOARD_PASSWORD não configurada`) no log | Variável ausente no `.env` | Adicione `DASHBOARD_PASSWORD=algumasenha` ao `.env` e reinicie |
+| Navegador pede senha e nada funciona | Senha errada, ou `DASHBOARD_PASSWORD` foi alterada depois que o navegador já tinha salvo a antiga | Confira o valor no `.env`; se necessário, feche e abra a aba do navegador de novo |
+| `http://localhost:3000` não abre | Porta em uso por outro programa, ou o processo do agente não está rodando | Rode `npm start` e confira se apareceu `✓ Dashboard disponível em http://localhost:3000`; se a porta 3000 já estiver em uso, mude `DASHBOARD_PORT` no `.env` |
+| Dashboard mostra dados diferentes em outro computador | O banco (`data/dashboard.sqlite`) é local a cada máquina | Comportamento esperado — veja a nota na seção 14 |
 
-## 13. Limitações da versão atual
+## 14. Limitações da versão atual
 
 - Só entende mensagens de **texto** (imagens, áudios e figurinhas são ignorados).
-- O histórico de conversa fica **em memória** — reiniciar o processo apaga o contexto de todos os contatos.
+- O histórico de conversa **para o Gemini** fica em memória — reiniciar o processo apaga o contexto da conversa (mas o histórico salvo no dashboard não se perde, pois fica no SQLite).
 - Não faz **agendamento real** de aula experimental (apenas coleta os dados).
-- Não há painel administrativo, banco de dados ou autenticação de múltiplos atendentes.
+- Não há autenticação de múltiplos atendentes nem edição dos dados da academia pelo próprio dashboard (ainda é preciso editar `src/config.js`).
+- **O banco de dados do dashboard é local**: cada computador onde o agente rodar terá seu próprio arquivo `data/dashboard.sqlite`, com os dados de atendimento daquela máquina. Se você e sua amiga rodarem o agente em computadores diferentes (por exemplo, cada um conectando um WhatsApp diferente para testar), cada um verá só as conversas que passaram pelo seu próprio computador — não existe um banco compartilhado entre máquinas nesta versão.
 - Depende de uma sessão de WhatsApp pessoal via Baileys (não é a API oficial paga da Meta), o que é adequado para fins de estudo/MVP, mas tem termos de uso próprios do WhatsApp a se observar.
 
-## 14. Melhorias futuras
+## 15. Melhorias futuras
 
-1. Persistir o histórico de conversa em um banco de dados (SQLite/Postgres) em vez de memória.
-2. Integrar com Google Calendar para agendamento real de aulas experimentais.
-3. Criar um painel administrativo web para editar os dados da academia sem mexer em código.
-4. Cadastro completo de alunos e histórico de matrícula.
-5. Integração com meios de pagamento para renovação de planos.
-6. Sistema de lembretes automáticos (aula marcada, vencimento de plano).
-7. Classificação automática de leads (quente/frio) com base na conversa.
-8. Handoff para atendimento humano quando o agente não conseguir ajudar.
-9. Base de conhecimento com RAG para responder dúvidas mais complexas.
-10. Múltiplos atendentes/números conectados simultaneamente.
-11. Analytics de atendimento (quantas conversas, principais dúvidas, taxa de conversão em aula experimental).
-12. Campanhas de recuperação de leads que pararam de responder.
+1. Integrar com Google Calendar para agendamento real de aulas experimentais.
+2. Permitir editar os dados da academia (planos, horários) pelo próprio dashboard, sem mexer em código.
+3. Cadastro completo de alunos e histórico de matrícula.
+4. Integração com meios de pagamento para renovação de planos.
+5. Sistema de lembretes automáticos (aula marcada, vencimento de plano).
+6. Classificação automática de leads (quente/frio) com base na conversa.
+7. Handoff para atendimento humano quando o agente não conseguir ajudar.
+8. Base de conhecimento com RAG para responder dúvidas mais complexas.
+9. Múltiplos atendentes/números conectados simultaneamente.
+10. Analytics de atendimento (principais dúvidas, taxa de conversão em aula experimental).
+11. Campanhas de recuperação de leads que pararam de responder.
+12. Banco compartilhado entre computadores (ex.: um servidor central), caso o projeto deixe de ser só local.
 
-## 15. Comandos úteis (resumo)
+## 16. Comandos úteis (resumo)
 
 ```powershell
 npm install     # instala as dependências
-npm start        # inicia o agente
+npm start        # inicia o agente + dashboard
 npm run dev      # inicia com reinício automático (nodemon)
 ```
+
+Depois de `npm start`, o dashboard fica em **http://localhost:3000**
+(usuário: qualquer texto; senha: valor de `DASHBOARD_PASSWORD` no `.env`).
 
 ---
 

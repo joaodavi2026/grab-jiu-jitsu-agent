@@ -2,6 +2,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeys
 import qrcode from 'qrcode-terminal';
 import pino from 'pino';
 import { gerarResposta } from './gemini.js';
+import { registrarMensagem } from './db.js';
 
 // O Baileys é bastante verboso por padrão (loga cada evento interno do
 // protocolo em JSON). Mantemos apenas os nossos próprios logs, mais
@@ -11,6 +12,14 @@ const loggerSilencioso = pino({ level: 'silent' });
 const PASTA_SESSAO = 'auth_info_baileys';
 const MAX_TENTATIVAS_RECONEXAO = 5;
 let tentativasReconexao = 0;
+
+// Status da conexão, consultado pelo dashboard (src/dashboard.js) via
+// obterStatusConexao(). Mantido em memória — não precisa de mais que isso.
+let statusConexao = 'conectando';
+
+export function obterStatusConexao() {
+  return statusConexao;
+}
 
 function log(mensagem) {
   const hora = new Date().toLocaleTimeString('pt-BR');
@@ -63,6 +72,7 @@ async function processarMensagem(sock, mensagem) {
   }
 
   log(`Nova mensagem\nContato: ${contatoId}\nMensagem: ${texto}`);
+  registrarMensagem(contatoId, mensagem.pushName, 'recebida', texto);
 
   try {
     // Indica "digitando..." enquanto o Gemini processa a resposta.
@@ -75,6 +85,7 @@ async function processarMensagem(sock, mensagem) {
 
     await sock.sendPresenceUpdate('paused', contatoId);
     await sock.sendMessage(contatoId, { text: resposta });
+    registrarMensagem(contatoId, mensagem.pushName, 'enviada', resposta);
     log('Mensagem enviada ✓');
   } catch (erro) {
     console.error('[WHATSAPP] Erro ao processar mensagem:', erro.message);
@@ -99,12 +110,14 @@ export async function iniciarWhatsApp() {
     const { connection, qr, lastDisconnect } = update;
 
     if (qr) {
+      statusConexao = 'aguardando_qr';
       log('Escaneie o QR Code abaixo com o WhatsApp do número da academia:');
       qrcode.generate(qr, { small: true });
     }
 
     if (connection === 'open') {
       tentativasReconexao = 0;
+      statusConexao = 'conectado';
       log('✓ WhatsApp conectado!');
     }
 
@@ -113,16 +126,19 @@ export async function iniciarWhatsApp() {
       const deslogado = codigoErro === DisconnectReason.loggedOut;
 
       if (deslogado) {
+        statusConexao = 'deslogado';
         log('Sessão encerrada (logout). Apague a pasta auth_info_baileys e reinicie para gerar um novo QR Code.');
         return;
       }
 
       if (tentativasReconexao < MAX_TENTATIVAS_RECONEXAO) {
+        statusConexao = 'reconectando';
         tentativasReconexao += 1;
         const espera = Math.min(1000 * 2 ** tentativasReconexao, 30000);
         log(`Conexão perdida. Tentando reconectar em ${espera / 1000}s (tentativa ${tentativasReconexao}/${MAX_TENTATIVAS_RECONEXAO})...`);
         setTimeout(iniciarWhatsApp, espera);
       } else {
+        statusConexao = 'desconectado';
         console.error('[WHATSAPP] Número máximo de tentativas de reconexão excedido. Encerrando.');
         process.exit(1);
       }

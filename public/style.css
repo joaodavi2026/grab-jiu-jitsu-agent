@@ -1,0 +1,361 @@
+:root {
+  --bg: #0a1628;
+  --bg-painel: #101d33;
+  --bg-card: #142640;
+  --borda: #23375a;
+  --texto: #e6edf7;
+  --texto-fraco: #8ea0c2;
+  --azul: #3b82f6;
+  --azul-forte: #2563eb;
+  --verde: #22c55e;
+  --amarelo: #eab308;
+  --vermelho: #ef4444;
+  --bolha-recebida: #1c2f4d;
+  --bolha-enviada: #1d4ed8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--texto);
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 24px;
+  background: var(--bg-painel);
+  border-bottom: 1px solid var(--borda);
+  flex-wrap: wrap;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.abas {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.aba {
+  background: transparent;
+  border: none;
+  color: var(--texto-fraco);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.aba:hover {
+  background: var(--bg-card);
+  color: var(--texto);
+}
+
+.aba.ativa {
+  background: var(--azul-forte);
+  color: #fff;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+}
+
+.status-ponto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--texto-fraco);
+  transition: background 0.3s;
+}
+
+.status-ponto.conectado { background: var(--verde); }
+.status-ponto.conectando,
+.status-ponto.reconectando,
+.status-ponto.aguardando_qr { background: var(--amarelo); }
+.status-ponto.desconectado,
+.status-ponto.deslogado { background: var(--vermelho); }
+
+.conteudo {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+.painel {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-rotulo {
+  font-size: 0.8rem;
+  color: var(--texto-fraco);
+}
+
+.card-valor {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.secao-titulo {
+  font-size: 1rem;
+  color: var(--texto-fraco);
+  margin-bottom: 12px;
+}
+
+.lista-conversas-recentes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conversa-recente-item {
+  background: var(--bg-card);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.conversa-recente-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.conversa-recente-nome {
+  font-weight: 600;
+}
+
+.conversa-recente-preview {
+  font-size: 0.85rem;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 480px;
+}
+
+.conversa-recente-hora {
+  font-size: 0.78rem;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+}
+
+.estado-carregando,
+.estado-vazio,
+.estado-erro {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--texto-fraco);
+}
+
+.estado-erro {
+  color: var(--vermelho);
+}
+
+/* ===== Conversas ===== */
+
+.conversas-layout {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 130px);
+}
+
+.lista-contatos {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--bg-painel);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  overflow-y: auto;
+}
+
+.contato-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--borda);
+  cursor: pointer;
+}
+
+.contato-item:hover {
+  background: var(--bg-card);
+}
+
+.contato-item.selecionado {
+  background: var(--bg-card);
+  border-left: 3px solid var(--azul);
+}
+
+.contato-nome {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.contato-preview {
+  font-size: 0.8rem;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contato-hora {
+  font-size: 0.72rem;
+  color: var(--texto-fraco);
+}
+
+.painel-chat {
+  flex: 1;
+  background: var(--bg-painel);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+.chat-cabecalho {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.chat-mensagens {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-estado-vazio {
+  margin: auto;
+}
+
+.bolha {
+  max-width: 65%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bolha-recebida {
+  align-self: flex-start;
+  background: var(--bolha-recebida);
+  border-bottom-left-radius: 4px;
+}
+
+.bolha-enviada {
+  align-self: flex-end;
+  background: var(--bolha-enviada);
+  border-bottom-right-radius: 4px;
+}
+
+.bolha-hora {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--texto-fraco);
+  margin-top: 4px;
+  text-align: right;
+}
+
+.botao-voltar {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--azul);
+  padding: 12px 16px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* ===== Responsivo ===== */
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: 10px;
+  }
+
+  .conversas-layout {
+    height: calc(100vh - 160px);
+    position: relative;
+  }
+
+  .lista-contatos {
+    width: 100%;
+  }
+
+  .conversas-layout.mostrando-chat .lista-contatos {
+    display: none;
+  }
+
+  .painel-chat {
+    display: none;
+  }
+
+  .conversas-layout.mostrando-chat .painel-chat {
+    display: flex;
+  }
+
+  .botao-voltar:not([hidden]) {
+    display: block;
+  }
+
+  .conversa-recente-preview {
+    max-width: 160px;
+  }
+}

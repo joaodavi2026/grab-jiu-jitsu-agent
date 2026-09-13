@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — GRAB Jiu-Jitsu</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="marca">
+        <span class="marca-icone">🥋</span>
+        <span class="marca-nome">GRAB Jiu-Jitsu</span>
+      </div>
+
+      <nav class="abas">
+        <button class="aba ativa" data-aba="visao-geral">Visão geral</button>
+        <button class="aba" data-aba="conversas">Conversas</button>
+      </nav>
+
+      <div class="status" id="status-conexao">
+        <span class="status-ponto" id="status-ponto"></span>
+        <span id="status-texto">verificando...</span>
+      </div>
+    </header>
+
+    <main class="conteudo">
+      <!-- VISÃO GERAL -->
+      <section id="painel-visao-geral" class="painel">
+        <div id="visao-geral-carregando" class="estado-carregando">Carregando métricas...</div>
+        <div id="visao-geral-erro" class="estado-erro" hidden>
+          Não foi possível carregar os dados. Tentando novamente...
+        </div>
+
+        <div id="visao-geral-conteudo" hidden>
+          <div class="cards">
+            <div class="card">
+              <span class="card-rotulo">Contatos únicos</span>
+              <span class="card-valor" id="metrica-contatos">0</span>
+            </div>
+            <div class="card">
+              <span class="card-rotulo">Mensagens recebidas</span>
+              <span class="card-valor" id="metrica-recebidas">0</span>
+            </div>
+            <div class="card">
+              <span class="card-rotulo">Mensagens enviadas</span>
+              <span class="card-valor" id="metrica-enviadas">0</span>
+            </div>
+            <div class="card">
+              <span class="card-rotulo">Contatos hoje</span>
+              <span class="card-valor" id="metrica-hoje">0</span>
+            </div>
+          </div>
+
+          <h2 class="secao-titulo">Conversas recentes</h2>
+          <div id="conversas-recentes-lista" class="lista-conversas-recentes"></div>
+          <div id="conversas-recentes-vazio" class="estado-vazio" hidden>
+            Nenhuma conversa registrada ainda. Assim que alguém mandar uma mensagem no WhatsApp, ela aparece aqui.
+          </div>
+        </div>
+      </section>
+
+      <!-- CONVERSAS -->
+      <section id="painel-conversas" class="painel" hidden>
+        <div class="conversas-layout">
+          <aside class="lista-contatos" id="lista-contatos">
+            <div id="contatos-carregando" class="estado-carregando">Carregando contatos...</div>
+            <div id="contatos-vazio" class="estado-vazio" hidden>Nenhum contato ainda.</div>
+            <div id="contatos-itens"></div>
+          </aside>
+
+          <section class="painel-chat" id="painel-chat">
+            <button class="botao-voltar" id="botao-voltar" hidden>&larr; Voltar para contatos</button>
+            <div id="chat-vazio" class="estado-vazio chat-estado-vazio">
+              Selecione uma conversa para ver o histórico.
+            </div>
+            <div id="chat-carregando" class="estado-carregando" hidden>Carregando mensagens...</div>
+            <header class="chat-cabecalho" id="chat-cabecalho" hidden>
+              <strong id="chat-titulo"></strong>
+            </header>
+            <div class="chat-mensagens" id="chat-mensagens" hidden></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

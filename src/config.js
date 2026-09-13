@@ -132,4 +132,6 @@ export const CONFIG = {
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
   maxHistoricoMensagens: Number(process.env.MAX_HISTORICO_MENSAGENS) || 20,
+  dashboardPassword: process.env.DASHBOARD_PASSWORD,
+  dashboardPort: Number(process.env.DASHBOARD_PORT) || 3000,
 };

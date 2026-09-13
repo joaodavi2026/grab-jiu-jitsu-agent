@@ -1,5 +1,7 @@
 import { CONFIG } from './config.js';
 import { iniciarWhatsApp } from './whatsapp.js';
+import { iniciarBanco } from './db.js';
+import { iniciarDashboard } from './dashboard.js';
 
 function exibirBanner() {
   console.log('================================');
@@ -21,6 +23,8 @@ async function main() {
   console.log('✓ Variáveis de ambiente carregadas!');
   console.log(`✓ Gemini configurado (modelo: ${CONFIG.geminiModel})`);
 
+  await iniciarBanco();
+  iniciarDashboard();
   await iniciarWhatsApp();
   console.log('✓ Agente pronto para atendimento.\n');
 }
